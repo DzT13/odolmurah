@@ -1669,11 +1669,8 @@ SettTab:CreateParagraph({
     Title="Info Teknis",
     Content="Versi           : "..VERSION.."\n"..
             "UI Library      : Rayfield (GitHub Raw)\n"..
-            "TeleportMode    : Instant TP + Anchor
-"..
-            "TP Delay        : "..TP_DELAY_MIN.."-"..TP_DELAY_MAX.." detik
-"..
-            "TeleportSpeed   : "..SPEED.." stud/s\n"..
+            "TeleportMode    : Instant TP + Anchor\n"..
+            "TP Delay        : "..TP_DELAY_MIN.."-"..TP_DELAY_MAX.." detik\n"..
             "SafeY Offset    : +"..SAFE_Y.." stud\n"..
             "Titik Transit   : "..tostring(#TRANSIT).." waypoint\n"..
             "Wait di A       : "..WAIT_A.." detik\n"..
