@@ -19,7 +19,7 @@
 ║                                                                      ║
 ║  ATURAN:                                                             ║
 ║  • NO REJOIN — TeleportService TIDAK digunakan                      ║
-║  • TeleportSpeed = 49.5 stud/s (aman anti-deteksi)                 ║
+║  • TeleportMode = Instant TP + delay anti-deteksi (0.5-3s)        ║
 ║  • SafeY +3 stud di setiap titik                                    ║
 ║  • pcall berlapis per titik & per cycle                             ║
 ║  • task.spawn untuk farming agar UI tidak freeze                    ║
@@ -51,11 +51,13 @@ local MAP_NAME      = "Jawa Timur"
 local UI_TITLE      = "CDID Jawa Timur"
 local UI_SUB        = "Auto-Farm v7  |  No-Rejoin Loop"
 
-local SPEED         = 49.5   -- stud/detik → TweenService duration
+local SPEED         = 49.5   -- stud/detik → tidak dipakai lagi (sekarang instant TP)
 local SAFE_Y        = 3      -- offset Y agar tidak tertanam aspal
 local CYCLE_DELAY   = 0.2    -- detik antar micro-step dalam loop
 local WAIT_A        = 2      -- detik tunggu di Titik A (ambil misi)
 local WAIT_C        = 3      -- detik tunggu di Titik C sebelum loop ulang
+local TP_DELAY_MIN  = 0.5    -- delay minimum setelah teleport truck (detik)
+local TP_DELAY_MAX  = 3.0    -- delay maksimum setelah teleport truck (detik)
 
 local WH_MIN        = 300    -- webhook interval minimum (5 menit)
 local WH_MAX        = 600    -- webhook interval maksimum (10 menit)
@@ -204,7 +206,7 @@ local function WarpChar(targetV3)
     return ok
 end
 
--- Tween kendaraan ke posisi dengan SafeY (dibungkus pcall)
+-- Teleport kendaraan ke posisi dengan delay (anti-detect)
 -- Mengembalikan true jika sukses, false jika gagal
 local function MoveCar(car, targetV3)
     local success = false
@@ -224,17 +226,16 @@ local function MoveCar(car, targetV3)
         local rotCF  = curCF - curCF.Position
         local destCF = CFrame.new(dest) * rotCF
 
-        -- Hitung durasi dari posisi kendaraan saat ini
-        local dur = TweenDur(car.PrimaryPart.Position, dest)
+        -- Hitung jarak untuk delay proporsional
+        local dist = (car.PrimaryPart.Position - dest).Magnitude
+        local delay = math.clamp(dist / 10000, TP_DELAY_MIN, TP_DELAY_MAX)  -- 0.5-3 detik tergantung jarak
 
-        -- Tween vehicle dengan TweenService (anti-detect)
-        local tween = TwnSvc:Create(
-            car.PrimaryPart,
-            TweenInfo.new(dur, Enum.EasingStyle.Linear),
-            {CFrame = destCF}
-        )
-        tween:Play()
-        tween.Completed:Wait()
+        -- Teleport instant dengan PivotTo
+        car:PivotTo(destCF)
+        
+        -- Delay untuk simulasi perjalanan (anti-detect)
+        task.wait(delay)
+        
         success = true
     end)
 
@@ -967,7 +968,7 @@ HomeTab:CreateSection("Info Pemain")
 HomeTab:CreateLabel("👤 "..LP.Name.."   🆔 "..tostring(LP.UserId))
 HomeTab:CreateLabel(
     "🗺️ "..MAP_NAME..
-    "  ·  ⚡ "..SPEED.." stud/s"..
+    "  ·  ⚡ Instant TP"..
     "  ·  🛡️ SafeY+"..SAFE_Y
 )
 HomeTab:CreateLabel("🚫 TeleportService: NONAKTIF (loop dalam 1 server)")
