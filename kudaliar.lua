@@ -785,29 +785,31 @@ local function FarmLoop()
                 if not isTransit then
                     SetStatus("🏁 [L4] Tiba di Titik C — tunggu reward...")
 
-                    -- Keep truck anchored AND stay in vehicle during delivery
-                    pcall(function()
-                        if car and car.PrimaryPart then
-                            car.PrimaryPart.Anchored = true
-                            getgenv().DebugLog(" Truck anchored at Point C (staying in vehicle)")
-                        end
-                    end)
+                    -- DO NOT anchor truck at Point C - this ejects player
+                    -- Instead, just keep player seated and let truck physics settle naturally
+                    getgenv().DebugLog(" Arrived at Point C - keeping player in truck")
                     
-                    -- Ensure player stays seated in truck
-                    pcall(function()
-                        if not InVehicle() then
-                            local seat = car:FindFirstChild("DriveSeat")
-                            if seat then
-                                local hum = LP.Character:FindFirstChildOfClass("Humanoid")
-                                if hum then 
-                                    seat:Sit(hum)
-                                    getgenv().DebugLog(" Re-seated in truck at Point C")
-                                end
+                    -- Ensure player stays seated (don't anchor, it breaks seat weld)
+                    local staySeated = true
+                    task.spawn(function()
+                        while staySeated do
+                            if not InVehicle() then
+                                pcall(function()
+                                    local seat = car:FindFirstChild("DriveSeat")
+                                    if seat then
+                                        local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+                                        if hum then 
+                                            seat:Sit(hum)
+                                            getgenv().DebugLog(" Re-seated player (keep in truck)")
+                                        end
+                                    end
+                                end)
                             end
+                            task.wait(0.2)
                         end
                     end)
                     
-                    -- Wait for truck to fully settle (truck must stay visible)
+                    -- Wait for truck to settle naturally (no anchoring)
                     task.wait(2.0)
 
                     -- Fire RemoteEvent delivery
@@ -935,15 +937,12 @@ local function FarmLoop()
                     local moneyBefore = GetMoney()
                     getgenv().DebugLog(" Money before delivery: Rp " .. Fmt(moneyBefore))
                     
-                    -- Unanchor truck after job completion
-                    task.wait(1.0)
-                    pcall(function()
-                        if car and car.PrimaryPart then
-                            car.PrimaryPart.Anchored = false
-                            getgenv().DebugLog(" Truck unanchored")
-                        end
-                    end)
+                    -- Stop the stay-seated loop after delivery completes
+                    task.wait(3.0)
+                    staySeated = false
+                    getgenv().DebugLog(" Delivery complete, allowing exit")
                     
+                    -- No need to unanchor (truck was never anchored at Point C)
                     task.wait(1.0)
                     local moneyAfter = GetMoney()
                     getgenv().DebugLog(" Money after delivery: Rp " .. Fmt(moneyAfter))
