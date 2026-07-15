@@ -763,24 +763,74 @@ local function FarmLoop()
 
                     -- Coba fire proximity prompt di sekitar C
                     local promptCount = 0
+                    
+                    -- Method 1: Search in workspace.Etc (common location for job prompts)
+                    pcall(function()
+                        if workspace:FindFirstChild("Etc") then
+                            local etc = workspace.Etc
+                            
+                            -- Check for Truck delivery area
+                            if etc:FindFirstChild("Job") then
+                                local job = etc.Job
+                                if job:FindFirstChild("Truck") then
+                                    local truck = job.Truck
+                                    -- Search for Delivery or Ender prompt
+                                    for _, child in ipairs(truck:GetDescendants()) do
+                                        if child:IsA("ProximityPrompt") then
+                                            getgenv().DebugLog(" Found prompt in Etc.Job.Truck: " .. child.Parent.Name)
+                                            fireproximityprompt(child)
+                                            promptCount = promptCount + 1
+                                            task.wait(0.5)
+                                        end
+                                    end
+                                end
+                            end
+                            
+                            -- Check for CDID delivery
+                            if etc:FindFirstChild("CDID") then
+                                for _, child in ipairs(etc.CDID:GetDescendants()) do
+                                    if child:IsA("ProximityPrompt") then
+                                        getgenv().DebugLog(" Found prompt in Etc.CDID: " .. child.Parent.Name)
+                                        fireproximityprompt(child)
+                                        promptCount = promptCount + 1
+                                        task.wait(0.5)
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    
+                    -- Method 2: Search all descendants in GetPartBoundsInBox area
                     pcall(function()
                         local parts = workspace:GetPartBoundsInBox(
                             CFrame.new(PT_C), Vector3.new(40, 15, 40)
                         )
-                        getgenv().DebugLog(" Found " .. #parts .. " parts near Point C")
+                        getgenv().DebugLog(" Scanning " .. #parts .. " parts near Point C")
+                        
                         for _, p in ipairs(parts) do
-                            local pp = p:FindFirstChildOfClass("ProximityPrompt")
-                                     or (p.Parent and
-                                         p.Parent:FindFirstChildOfClass("ProximityPrompt"))
-                            if pp then
-                                getgenv().DebugLog(" Firing ProximityPrompt: " .. pp.Parent.Name)
-                                fireproximityprompt(pp)
+                            -- Check the part itself
+                            if p:IsA("ProximityPrompt") then
+                                getgenv().DebugLog(" Found prompt on part: " .. p.Name)
+                                fireproximityprompt(p)
                                 promptCount = promptCount + 1
                                 task.wait(0.5)
                             end
+                            
+                            -- Check all descendants of the part's parent
+                            if p.Parent then
+                                for _, desc in ipairs(p.Parent:GetDescendants()) do
+                                    if desc:IsA("ProximityPrompt") then
+                                        getgenv().DebugLog(" Found prompt in " .. p.Parent.Name .. ": " .. desc.Parent.Name)
+                                        fireproximityprompt(desc)
+                                        promptCount = promptCount + 1
+                                        task.wait(0.5)
+                                    end
+                                end
+                            end
                         end
                     end)
-                    getgenv().DebugLog(" Fired " .. promptCount .. " proximity prompts")
+                    
+                    getgenv().DebugLog(" Total fired: " .. promptCount .. " proximity prompts")
                     
                     -- Check money before/after
                     local moneyBefore = GetMoney()
