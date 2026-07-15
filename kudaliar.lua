@@ -726,6 +726,13 @@ local function FarmLoop()
                 if not isTransit then
                     SetStatus("🏁 [L4] Tiba di Titik C — tunggu reward...")
 
+                    -- Keep truck anchored during job completion to prevent falling
+                    pcall(function()
+                        if car and car.PrimaryPart then
+                            car.PrimaryPart.Anchored = true
+                        end
+                    end)
+
                     -- Fire RemoteEvent delivery
                     Fire("Job", "Truck")
                     Fire("Delivery", LP.Name)
@@ -743,6 +750,14 @@ local function FarmLoop()
                                 fireproximityprompt(pp)
                                 task.wait(0.5)
                             end
+                        end
+                    end)
+                    
+                    -- Unanchor truck after job completion
+                    task.wait(1.0)
+                    pcall(function()
+                        if car and car.PrimaryPart then
+                            car.PrimaryPart.Anchored = false
                         end
                     end)
                 end
