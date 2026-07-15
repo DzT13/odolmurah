@@ -132,6 +132,7 @@ getgenv().GS = getgenv().GS or {
     WebhookURL    = "",
     SelectedJob   = "Office Worker",
     CycleCount    = 0,
+    UseTransit    = true,      -- default: gunakan 7 waypoint transit
 }
 
 getgenv().SS = getgenv().SS or {
@@ -666,9 +667,19 @@ local function FarmLoop()
             -- Buat daftar titik penuh: B → transit → C
             -- (B tidak perlu di-tween lagi karena truck sudah di sana)
             local fullRoute = {}
-            for _, v in ipairs(TRANSIT) do
-                table.insert(fullRoute, v)
+            
+            -- Check if UseTransit is enabled
+            if getgenv().GS.UseTransit then
+                -- Use all 7 transit waypoints
+                for _, v in ipairs(TRANSIT) do
+                    table.insert(fullRoute, v)
+                end
+                getgenv().DebugLog("✅ Using 7 transit waypoints (B→Transit→C)")
+            else
+                -- Skip transit, go directly B → C
+                getgenv().DebugLog("⚡ Skipping transit, direct B→C teleport")
             end
+            
             table.insert(fullRoute, PT_C)
 
             local totalPts = #fullRoute
@@ -1264,6 +1275,20 @@ FarmTab:CreateParagraph({
 FarmTab:CreateDivider()
 FarmTab:CreateSection("⚙️ Konfigurasi")
 
+FarmTab:CreateToggle({
+    Name="🛣️ Gunakan 7 Waypoint Transit (B→C)",
+    CurrentValue=true,
+    Flag="UseTransit",
+    Callback=function(v)
+        getgenv().GS.UseTransit = v
+        if v then
+            Notif("Transit","✅ Aktif: B → 7 Transit → C\nLebih aman, lebih lambat", 5, "route")
+        else
+            Notif("Transit","⚡ Nonaktif: B → C langsung\nLebih cepat, lebih berisiko", 5, "zap")
+        end
+    end,
+})
+
 FarmTab:CreateInput({
     Name="🎯 Target Earning  (Rp, 0 = tidak ada batas)",
     PlaceholderText="0",
@@ -1284,7 +1309,7 @@ FarmTab:CreateSection("▶️ Kontrol")
 FarmTab:CreateParagraph({
     Title   = "ℹ️ Mode",
     Content = "Loop dalam 1 server (NO REJOIN)\n" ..
-              "Urutan: A → B → Spawn → Transit → C → ulang\n" ..
+              "Urutan: A → B → Spawn → (Transit/Langsung) → C → ulang\n" ..
               "TeleportService TIDAK digunakan",
 })
 
