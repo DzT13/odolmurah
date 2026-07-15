@@ -582,22 +582,27 @@ local function FarmLoop()
                     ", " .. tostring(math.floor(PT_A.Y)) ..
                     ", " .. tostring(math.floor(PT_A.Z)))
 
+            -- First TP to Point A
             WarpChar(PT_A)
             task.wait(0.5)
             
-            -- Move back 5 studs to trigger proximity prompt
+            -- Then tween to quest trigger position (required by game)
+            local questTriggerPos = Vector3.new(34938.49, 134.51, -54583.84)
             pcall(function()
                 local char = LP.Character
                 if char then
                     local hrp = char:FindFirstChild("HumanoidRootPart")
                     if hrp then
-                        local backPos = hrp.CFrame * CFrame.new(0, 0, 5)  -- 5 studs back
-                        hrp.CFrame = backPos
-                        getgenv().DebugLog(" Moved back 5 studs from Point A")
+                        -- Tween character to trigger position
+                        local tweenInfo = TweenInfo.new(1.0, Enum.EasingStyle.Linear)
+                        local tween = TwnSvc:Create(hrp, tweenInfo, {CFrame = CFrame.new(questTriggerPos)})
+                        tween:Play()
+                        tween.Completed:Wait()
+                        getgenv().DebugLog(" Moved to quest trigger position")
+                        task.wait(0.5)
                     end
                 end
             end)
-            task.wait(0.3)
 
             -- Fire RemoteEvent ambil misi - force CDID CARGO Surabaya
             -- Try multiple methods to ensure correct quest
@@ -780,27 +785,80 @@ local function FarmLoop()
                 if not isTransit then
                     SetStatus("🏁 [L4] Tiba di Titik C — tunggu reward...")
 
-                    -- Keep truck anchored during job completion to prevent falling/vanishing
+                    -- Keep truck anchored AND stay in vehicle during delivery
                     pcall(function()
                         if car and car.PrimaryPart then
                             car.PrimaryPart.Anchored = true
-                            getgenv().DebugLog(" Truck anchored at Point C (ground level)")
+                            getgenv().DebugLog(" Truck anchored at Point C (staying in vehicle)")
                         end
                     end)
                     
-                    -- Wait for truck to settle on ground
-                    task.wait(1.0)
+                    -- Ensure player stays seated in truck
+                    pcall(function()
+                        if not InVehicle() then
+                            local seat = car:FindFirstChild("DriveSeat")
+                            if seat then
+                                local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+                                if hum then 
+                                    seat:Sit(hum)
+                                    getgenv().DebugLog(" Re-seated in truck at Point C")
+                                end
+                            end
+                        end
+                    end)
+                    
+                    -- Wait for truck to fully settle (truck must stay visible)
+                    task.wait(2.0)
 
                     -- Fire RemoteEvent delivery
                     getgenv().DebugLog(" Firing Job RemoteEvent...")
                     Fire("Job", "Truck")
-                    task.wait(0.3)
+                    task.wait(0.5)
                     
                     getgenv().DebugLog(" Firing Delivery RemoteEvent...")
                     Fire("Delivery", LP.Name)
                     Fire("CompleteDelivery", "Surabaya")
                     Fire("TruckDelivery", "CDID CARGO Surabaya")
-                    task.wait(0.5)
+                    task.wait(1.0)
+                    
+                    -- Stay in truck during delivery verification
+                    getgenv().DebugLog(" Waiting in truck for delivery to register...")
+                    task.wait(2.0)
+                    
+                    -- Check if truck is in delivery zone (green boxes)
+                    pcall(function()
+                        if car and car.PrimaryPart then
+                            local truckPos = car.PrimaryPart.Position
+                            
+                            -- Green box zone 1: (27154.20, 387.36, 37799.63) to (27164.48, 387.38, 37791.28)
+                            local zone1 = {
+                                min = Vector3.new(27154.20, 387.36, 37791.28),
+                                max = Vector3.new(27164.48, 387.38, 37799.63)
+                            }
+                            
+                            -- Green box zone 2: (27172.43, 387.37, 37816.34) to (27135.93, 387.36, 37762.78)
+                            local zone2 = {
+                                min = Vector3.new(27135.93, 387.36, 37762.78),
+                                max = Vector3.new(27172.43, 387.37, 37816.34)
+                            }
+                            
+                            local inZone1 = (truckPos.X >= zone1.min.X and truckPos.X <= zone1.max.X) and
+                                           (truckPos.Z >= zone1.min.Z and truckPos.Z <= zone1.max.Z)
+                            local inZone2 = (truckPos.X >= zone2.min.X and truckPos.X <= zone2.max.X) and
+                                           (truckPos.Z >= zone2.min.Z and truckPos.Z <= zone2.max.Z)
+                            
+                            if inZone1 then
+                                getgenv().DebugLog(" ✅ Truck in delivery Zone 1")
+                            elseif inZone2 then
+                                getgenv().DebugLog(" ✅ Truck in delivery Zone 2")
+                            else
+                                getgenv().DebugLog(" ⚠️ Truck OUTSIDE delivery zones!")
+                                getgenv().DebugLog(" Truck at: " .. tostring(math.floor(truckPos.X)) .. ", " .. 
+                                                 tostring(math.floor(truckPos.Y)) .. ", " .. 
+                                                 tostring(math.floor(truckPos.Z)))
+                            end
+                        end
+                    end)
 
                     -- Coba fire proximity prompt di sekitar C
                     local promptCount = 0
