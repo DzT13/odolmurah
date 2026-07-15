@@ -66,7 +66,7 @@ local WH_MAX        = 600    -- webhook interval maksimum (10 menit)
 
 local PT_A = Vector3.new(34937.21, 135.64 + SAFE_Y, -54576.89)  -- ambil misi
 local PT_B = Vector3.new(35160.10, 135.64 + SAFE_Y, -54683.03)  -- spawn truck
-local PT_C = Vector3.new(27157.46, 387.37 + SAFE_Y,  37787.37)  -- delivery Surabaya (fixed coordinate)
+local PT_C = Vector3.new(27162.20, 387.39 + SAFE_Y,  37777.75)  -- delivery Surabaya (ground level coordinate)
 
 --[[
   ═══════════════════════════════════════════════════════════════════
@@ -583,10 +583,34 @@ local function FarmLoop()
                     ", " .. tostring(math.floor(PT_A.Z)))
 
             WarpChar(PT_A)
+            task.wait(0.5)
+            
+            -- Move back 5 studs to trigger proximity prompt
+            pcall(function()
+                local char = LP.Character
+                if char then
+                    local hrp = char:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        local backPos = hrp.CFrame * CFrame.new(0, 0, 5)  -- 5 studs back
+                        hrp.CFrame = backPos
+                        getgenv().DebugLog(" Moved back 5 studs from Point A")
+                    end
+                end
+            end)
             task.wait(0.3)
 
-            -- Fire RemoteEvent ambil misi (sesuaikan nama event dengan game)
+            -- Fire RemoteEvent ambil misi - force CDID CARGO Surabaya
+            -- Try multiple methods to ensure correct quest
             Fire("Job", "Truck")
+            task.wait(0.2)
+            
+            -- Method 1: Fire with specific destination
+            Fire("Job", "Truck", "Surabaya")
+            Fire("TruckJob", "Surabaya")
+            Fire("SelectDestination", "CDID CARGO Surabaya")
+            task.wait(0.2)
+            
+            getgenv().DebugLog(" Fired Job RemoteEvents (forcing Surabaya)")
 
             -- Coba fire proximity prompt jika ada di sekitar Titik A
             pcall(function()
@@ -598,6 +622,7 @@ local function FarmLoop()
                              or (p.Parent and p.Parent:FindFirstChildOfClass("ProximityPrompt"))
                     if pp then
                         fireproximityprompt(pp)
+                        getgenv().DebugLog(" Fired prompt at A: " .. pp.Parent.Name)
                         task.wait(0.5)
                     end
                 end
@@ -755,13 +780,16 @@ local function FarmLoop()
                 if not isTransit then
                     SetStatus("🏁 [L4] Tiba di Titik C — tunggu reward...")
 
-                    -- Keep truck anchored during job completion to prevent falling
+                    -- Keep truck anchored during job completion to prevent falling/vanishing
                     pcall(function()
                         if car and car.PrimaryPart then
                             car.PrimaryPart.Anchored = true
-                            getgenv().DebugLog(" Truck anchored at Point C")
+                            getgenv().DebugLog(" Truck anchored at Point C (ground level)")
                         end
                     end)
+                    
+                    -- Wait for truck to settle on ground
+                    task.wait(1.0)
 
                     -- Fire RemoteEvent delivery
                     getgenv().DebugLog(" Firing Job RemoteEvent...")
@@ -770,7 +798,9 @@ local function FarmLoop()
                     
                     getgenv().DebugLog(" Firing Delivery RemoteEvent...")
                     Fire("Delivery", LP.Name)
-                    task.wait(0.3)
+                    Fire("CompleteDelivery", "Surabaya")
+                    Fire("TruckDelivery", "CDID CARGO Surabaya")
+                    task.wait(0.5)
 
                     -- Coba fire proximity prompt di sekitar C
                     local promptCount = 0
