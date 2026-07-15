@@ -190,13 +190,18 @@ end
 
 -- Teleport karakter (instant, tanpa tween) — untuk Titik A & B
 local function WarpChar(targetV3)
-    pcall(function()
-        local char = LP.Character
+    local ok = pcall(function()
+        local char = LP.Character or LP.CharacterAdded:Wait()
         if not char then return end
-        local hrp  = char:WaitForChild("HumanoidRootPart", 5)
-        if not hrp then return end
-        hrp.CFrame = CFrame.new(targetV3)
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then
+            hrp = char:WaitForChild("HumanoidRootPart", 3)
+        end
+        if hrp then
+            hrp.CFrame = CFrame.new(targetV3)
+        end
     end)
+    return ok
 end
 
 -- Tween kendaraan ke posisi dengan SafeY (dibungkus pcall)
@@ -1463,19 +1468,29 @@ DevTab:CreateButton({
             Notif("Test","Titik tidak ditemukan!",3,"alert")
             return
         end
-        WarpChar(pos)
-        Notif(
-            "Test TP",
-            string.format(
-                "✅ Teleport ke %s\nX=%.0f Y=%.0f Z=%.0f",
+        
+        local ok = WarpChar(pos)
+        
+        if ok then
+            Notif(
+                "Test TP",
+                string.format(
+                    "✅ Teleport ke %s\nX=%.0f Y=%.0f Z=%.0f",
+                    SelTestPoint, pos.X, pos.Y, pos.Z
+                ),
+                5, "check"
+            )
+            print(string.format(
+                "[TestCoord] Teleported to %s: (%.2f, %.2f, %.2f)",
                 SelTestPoint, pos.X, pos.Y, pos.Z
-            ),
-            5, "check"
-        )
-        print(string.format(
-            "[TestCoord] Teleported to %s: (%.2f, %.2f, %.2f)",
-            SelTestPoint, pos.X, pos.Y, pos.Z
-        ))
+            ))
+        else
+            Notif(
+                "Test TP",
+                "❌ Teleport gagal!\nCek apakah karakter ada.",
+                4, "alert"
+            )
+        end
     end,
 })
 
