@@ -54,7 +54,7 @@ local UI_SUB        = "Auto-Farm v7  |  No-Rejoin Loop"
 local SPEED         = 49.5   -- stud/detik → tidak dipakai lagi (sekarang instant TP)
 local SAFE_Y        = 3      -- offset Y agar tidak tertanam aspal
 local CYCLE_DELAY   = 0.2    -- detik antar micro-step dalam loop
-local WAIT_A        = 2      -- detik tunggu di Titik A (ambil misi)
+local WAIT_A        = 5      -- detik tunggu di Titik A (ambil misi + render GUI)
 local WAIT_C        = 3      -- detik tunggu di Titik C sebelum loop ulang
 local TP_DELAY_MIN  = 0.1    -- delay minimum setelah teleport truck (detik)
 local TP_DELAY_MAX  = 0.5    -- delay maksimum setelah teleport truck (detik)
@@ -597,7 +597,7 @@ local function FarmLoop()
                              or (p.Parent and p.Parent:FindFirstChildOfClass("ProximityPrompt"))
                     if pp then
                         fireproximityprompt(pp)
-                        task.wait(0.2)
+                        task.wait(0.5)
                     end
                 end
             end)
@@ -741,7 +741,7 @@ local function FarmLoop()
                                          p.Parent:FindFirstChildOfClass("ProximityPrompt"))
                             if pp then
                                 fireproximityprompt(pp)
-                                task.wait(0.3)
+                                task.wait(0.5)
                             end
                         end
                     end)
