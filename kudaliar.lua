@@ -1404,9 +1404,9 @@ DevTab:CreateDivider()
 DevTab:CreateSection("🧪 Test Koordinat")
 DevTab:CreateParagraph({
     Title="Cara Test",
-    Content="1. Pilih titik dari dropdown\n"...
-            "2. Klik 'TP ke Titik' untuk teleport karakter\n"...
-            "3. Atau klik 'Test Tween Truck' jika sudah punya truck\n"...
+    Content="1. Pilih titik dari dropdown\n"..
+            "2. Klik 'TP ke Titik' untuk teleport karakter\n"..
+            "3. Atau klik 'Test Tween Truck' jika sudah punya truck\n"..
             "4. Cek apakah koordinat masih akurat",
 })
 
