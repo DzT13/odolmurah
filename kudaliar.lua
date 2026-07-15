@@ -19,7 +19,7 @@
 ║                                                                      ║
 ║  ATURAN:                                                             ║
 ║  • NO REJOIN — TeleportService TIDAK digunakan                      ║
-║  • TeleportMode = Instant TP + delay anti-deteksi (0.5-3s)        ║
+║  • TeleportMode = Instant TP + anchor + delay (0.1-0.5s)          ║
 ║  • SafeY +3 stud di setiap titik                                    ║
 ║  • pcall berlapis per titik & per cycle                             ║
 ║  • task.spawn untuk farming agar UI tidak freeze                    ║
@@ -56,8 +56,8 @@ local SAFE_Y        = 3      -- offset Y agar tidak tertanam aspal
 local CYCLE_DELAY   = 0.2    -- detik antar micro-step dalam loop
 local WAIT_A        = 2      -- detik tunggu di Titik A (ambil misi)
 local WAIT_C        = 3      -- detik tunggu di Titik C sebelum loop ulang
-local TP_DELAY_MIN  = 0.5    -- delay minimum setelah teleport truck (detik)
-local TP_DELAY_MAX  = 3.0    -- delay maksimum setelah teleport truck (detik)
+local TP_DELAY_MIN  = 0.1    -- delay minimum setelah teleport truck (detik)
+local TP_DELAY_MAX  = 0.5    -- delay maksimum setelah teleport truck (detik)
 
 local WH_MIN        = 300    -- webhook interval minimum (5 menit)
 local WH_MAX        = 600    -- webhook interval maksimum (10 menit)
@@ -228,18 +228,30 @@ local function MoveCar(car, targetV3)
 
         -- Hitung jarak untuk delay proporsional
         local dist = (car.PrimaryPart.Position - dest).Magnitude
-        local delay = math.clamp(dist / 10000, TP_DELAY_MIN, TP_DELAY_MAX)  -- 0.5-3 detik tergantung jarak
+        local delay = math.clamp(dist / 10000, TP_DELAY_MIN, TP_DELAY_MAX)  -- 0.1-0.5 detik tergantung jarak
 
+        -- Anchor truck untuk mencegah jatuh saat teleport
+        car.PrimaryPart.Anchored = true
+        
         -- Teleport instant dengan PivotTo
         car:PivotTo(destCF)
         
-        -- Delay untuk simulasi perjalanan (anti-detect)
+        -- Delay singkat untuk simulasi perjalanan (anti-detect)
         task.wait(delay)
+        
+        -- Unanchor truck setelah sampai (physics aktif kembali)
+        car.PrimaryPart.Anchored = false
         
         success = true
     end)
 
     if not ok then
+        -- Pastikan truck tidak stuck di anchored state jika error
+        pcall(function()
+            if car and car.PrimaryPart then
+                car.PrimaryPart.Anchored = false
+            end
+        end)
         warn("[MoveCar] Error:", tostring(err))
     end
     return success
@@ -1657,7 +1669,10 @@ SettTab:CreateParagraph({
     Title="Info Teknis",
     Content="Versi           : "..VERSION.."\n"..
             "UI Library      : Rayfield (GitHub Raw)\n"..
-            "Config Saving   : Nonaktif (aman mobile)\n"..
+            "TeleportMode    : Instant TP + Anchor
+"..
+            "TP Delay        : "..TP_DELAY_MIN.."-"..TP_DELAY_MAX.." detik
+"..
             "TeleportSpeed   : "..SPEED.." stud/s\n"..
             "SafeY Offset    : +"..SAFE_Y.." stud\n"..
             "Titik Transit   : "..tostring(#TRANSIT).." waypoint\n"..
