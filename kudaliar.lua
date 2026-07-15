@@ -1401,6 +1401,213 @@ DevTab:CreateLabel(string.format(
 ))
 
 DevTab:CreateDivider()
+DevTab:CreateSection("🧪 Test Koordinat")
+DevTab:CreateParagraph({
+    Title="Cara Test",
+    Content="1. Pilih titik dari dropdown\n"...
+            "2. Klik 'TP ke Titik' untuk teleport karakter\n"...
+            "3. Atau klik 'Test Tween Truck' jika sudah punya truck\n"...
+            "4. Cek apakah koordinat masih akurat",
+})
+
+local TestPoints = {
+    ["A - Ambil Misi"] = PT_A,
+    ["B - Spawn Truck"] = PT_B,
+    ["C - Delivery Surabaya"] = PT_C,
+    ["Transit 1/7"] = TRANSIT[1],
+    ["Transit 2/7"] = TRANSIT[2],
+    ["Transit 3/7"] = TRANSIT[3],
+    ["Transit 4/7 (puncak)"] = TRANSIT[4],
+    ["Transit 5/7"] = TRANSIT[5],
+    ["Transit 6/7"] = TRANSIT[6],
+    ["Transit 7/7"] = TRANSIT[7],
+}
+
+local SelTestPoint = "A - Ambil Misi"
+
+DevTab:CreateDropdown({
+    Name="Pilih Titik",
+    Options={
+        "A - Ambil Misi",
+        "B - Spawn Truck",
+        "C - Delivery Surabaya",
+        "Transit 1/7",
+        "Transit 2/7",
+        "Transit 3/7",
+        "Transit 4/7 (puncak)",
+        "Transit 5/7",
+        "Transit 6/7",
+        "Transit 7/7",
+    },
+    CurrentOption={"A - Ambil Misi"},
+    Flag="TestPointDD",
+    Callback=function(opt)
+        SelTestPoint = tostring(opt)
+        local pos = TestPoints[SelTestPoint]
+        Notif(
+            "Test Point",
+            string.format(
+                "Dipilih: %s\nX=%.0f Y=%.0f Z=%.0f",
+                SelTestPoint, pos.X, pos.Y, pos.Z
+            ),
+            5, "map-pin"
+        )
+    end,
+})
+
+DevTab:CreateButton({
+    Name="📍 TP ke Titik (Karakter)",
+    Callback=function()
+        local pos = TestPoints[SelTestPoint]
+        if not pos then
+            Notif("Test","Titik tidak ditemukan!",3,"alert")
+            return
+        end
+        WarpChar(pos)
+        Notif(
+            "Test TP",
+            string.format(
+                "✅ Teleport ke %s\nX=%.0f Y=%.0f Z=%.0f",
+                SelTestPoint, pos.X, pos.Y, pos.Z
+            ),
+            5, "check"
+        )
+        print(string.format(
+            "[TestCoord] Teleported to %s: (%.2f, %.2f, %.2f)",
+            SelTestPoint, pos.X, pos.Y, pos.Z
+        ))
+    end,
+})
+
+DevTab:CreateButton({
+    Name="🚚 Test Tween Truck",
+    Callback=function()
+        local pos = TestPoints[SelTestPoint]
+        if not pos then
+            Notif("Test","Titik tidak ditemukan!",3,"alert")
+            return
+        end
+        
+        local car = FindCar()
+        if not car then
+            Notif("Test","❌ Truck tidak ditemukan!\nSpawn truck terlebih dahulu.",5,"alert")
+            return
+        end
+        
+        if not InVehicle() then
+            Notif("Test","⚠️ Kamu tidak duduk di truck!",4,"alert")
+            return
+        end
+        
+        Notif(
+            "Test Tween",
+            string.format(
+                "⏳ Tween truck ke %s...\nX=%.0f Y=%.0f Z=%.0f",
+                SelTestPoint, pos.X, pos.Y, pos.Z
+            ),
+            5, "truck"
+        )
+        
+        task.spawn(function()
+            local ok = MoveCar(car, pos)
+            if ok then
+                Notif(
+                    "Test Tween",
+                    "✅ Tween selesai!\nCek apakah truck jatuh atau aman.",
+                    6, "check"
+                )
+                print(string.format(
+                    "[TestCoord] Tween to %s: SUCCESS",
+                    SelTestPoint
+                ))
+            else
+                Notif(
+                    "Test Tween",
+                    "❌ Tween gagal!\nCek console untuk error.",
+                    5, "alert"
+                )
+                print(string.format(
+                    "[TestCoord] Tween to %s: FAILED",
+                    SelTestPoint
+                ))
+            end
+        end)
+    end,
+})
+
+DevTab:CreateButton({
+    Name="🔄 Test Full Route (A→B→Transit→C)",
+    Callback=function()
+        Notif(
+            "Test Route",
+            "⚠️ Mode debug aktif!\nScript akan test semua titik:\nA → B → 7 Transit → C",
+            7, "route"
+        )
+        
+        task.spawn(function()
+            -- Test TP ke A
+            SetStatus("🧪 [TEST] TP ke A...")
+            WarpChar(PT_A)
+            task.wait(2)
+            
+            -- Test TP ke B
+            SetStatus("🧪 [TEST] TP ke B...")
+            WarpChar(PT_B)
+            task.wait(2)
+            
+            -- Spawn truck
+            SetStatus("🧪 [TEST] Spawn truck...")
+            local car = SpawnTruck()
+            if not car then
+                Notif("Test Route","❌ Truck gagal spawn!",5,"alert")
+                SetStatus("❌ Test dibatalkan.")
+                return
+            end
+            task.wait(2)
+            
+            -- Test tween semua transit + C
+            local allPoints = {}
+            for i, v in ipairs(TRANSIT) do
+                table.insert(allPoints, {label = "Transit "..i.."/7", pos = v})
+            end
+            table.insert(allPoints, {label = "C (Delivery)", pos = PT_C})
+            
+            for idx, data in ipairs(allPoints) do
+                if not InVehicle() then
+                    Notif("Test Route","⚠️ Keluar dari truck!",4,"alert")
+                    break
+                end
+                
+                SetStatus(string.format(
+                    "🧪 [TEST] Tween ke %s (%d/%d)...",
+                    data.label, idx, #allPoints
+                ))
+                
+                local ok = MoveCar(car, data.pos)
+                if not ok then
+                    Notif(
+                        "Test Route",
+                        string.format("❌ Gagal di %s!", data.label),
+                        5, "alert"
+                    )
+                    SetStatus("❌ Test dibatalkan.")
+                    return
+                end
+                
+                task.wait(1)
+            end
+            
+            Notif(
+                "Test Route",
+                "✅ Test selesai!\nSemua koordinat berhasil.\nJika truck jatuh = Y salah.",
+                8, "check"
+            )
+            SetStatus("✅ Test route selesai.")
+        end)
+    end,
+})
+
+DevTab:CreateDivider()
 DevTab:CreateSection("Dev Tools")
 DevTab:CreateButton({Name="Dex Explorer",
     Callback=function()
