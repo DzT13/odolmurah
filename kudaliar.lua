@@ -1449,14 +1449,18 @@ DevTab:CreateDropdown({
     Callback=function(opt)
         SelTestPoint = tostring(opt)
         local pos = TestPoints[SelTestPoint]
-        Notif(
-            "Test Point",
-            string.format(
-                "Dipilih: %s\nX=%.0f Y=%.0f Z=%.0f",
-                SelTestPoint, pos.X, pos.Y, pos.Z
-            ),
-            5, "map-pin"
-        )
+        if pos then
+            Notif(
+                "Test Point",
+                string.format(
+                    "Dipilih: %s\nX=%.0f Y=%.0f Z=%.0f",
+                    SelTestPoint, pos.X, pos.Y, pos.Z
+                ),
+                5, "map-pin"
+            )
+        else
+            Notif("Test Point", "Titik tidak ditemukan: "..SelTestPoint, 3, "alert")
+        end
     end,
 })
 
