@@ -604,6 +604,24 @@ local function FarmLoop()
 
             SetStatus("⏳ [L1] Tunggu " .. WAIT_A .. " detik (ambil misi)...")
             task.wait(WAIT_A)
+            
+            -- Debug: Check if quest GUI appeared
+            local questTaken = false
+            pcall(function()
+                local gui = LP.PlayerGui:FindFirstChild("Job")
+                if gui then
+                    questTaken = true
+                    print("[DEBUG] Quest GUI found - quest likely accepted")
+                else
+                    print("[DEBUG] Quest GUI NOT found - quest might have failed")
+                end
+            end)
+            
+            if not questTaken then
+                print("[DEBUG] Retrying quest at Point A...")
+                Fire("Job", "Truck")
+                task.wait(2)
+            end
 
             if not getgenv().GS.OnFarming then return end
             if CheckTarget() then return end
@@ -730,36 +748,62 @@ local function FarmLoop()
                     pcall(function()
                         if car and car.PrimaryPart then
                             car.PrimaryPart.Anchored = true
+                            print("[DEBUG] Truck anchored at Point C")
                         end
                     end)
 
                     -- Fire RemoteEvent delivery
+                    print("[DEBUG] Firing Job RemoteEvent...")
                     Fire("Job", "Truck")
+                    task.wait(0.3)
+                    
+                    print("[DEBUG] Firing Delivery RemoteEvent...")
                     Fire("Delivery", LP.Name)
+                    task.wait(0.3)
 
                     -- Coba fire proximity prompt di sekitar C
+                    local promptCount = 0
                     pcall(function()
                         local parts = workspace:GetPartBoundsInBox(
                             CFrame.new(PT_C), Vector3.new(40, 15, 40)
                         )
+                        print("[DEBUG] Found " .. #parts .. " parts near Point C")
                         for _, p in ipairs(parts) do
                             local pp = p:FindFirstChildOfClass("ProximityPrompt")
                                      or (p.Parent and
                                          p.Parent:FindFirstChildOfClass("ProximityPrompt"))
                             if pp then
+                                print("[DEBUG] Firing ProximityPrompt: " .. pp.Parent.Name)
                                 fireproximityprompt(pp)
+                                promptCount = promptCount + 1
                                 task.wait(0.5)
                             end
                         end
                     end)
+                    print("[DEBUG] Fired " .. promptCount .. " proximity prompts")
+                    
+                    -- Check money before/after
+                    local moneyBefore = GetMoney()
+                    print("[DEBUG] Money before delivery: Rp " .. Fmt(moneyBefore))
                     
                     -- Unanchor truck after job completion
                     task.wait(1.0)
                     pcall(function()
                         if car and car.PrimaryPart then
                             car.PrimaryPart.Anchored = false
+                            print("[DEBUG] Truck unanchored")
                         end
                     end)
+                    
+                    task.wait(1.0)
+                    local moneyAfter = GetMoney()
+                    print("[DEBUG] Money after delivery: Rp " .. Fmt(moneyAfter))
+                    
+                    if moneyAfter > moneyBefore then
+                        print("[DEBUG] ✅ Job completed! Earned: Rp " .. Fmt(moneyAfter - moneyBefore))
+                    else
+                        print("[DEBUG] ❌ Job NOT completed - no money received")
+                    end
                 end
 
                 task.wait(CYCLE_DELAY)
