@@ -611,14 +611,14 @@ local function FarmLoop()
                 local gui = LP.PlayerGui:FindFirstChild("Job")
                 if gui then
                     questTaken = true
-                    print("[DEBUG] Quest GUI found - quest likely accepted")
+                    getgenv().DebugLog(" Quest GUI found - quest likely accepted")
                 else
-                    print("[DEBUG] Quest GUI NOT found - quest might have failed")
+                    getgenv().DebugLog(" Quest GUI NOT found - quest might have failed")
                 end
             end)
             
             if not questTaken then
-                print("[DEBUG] Retrying quest at Point A...")
+                getgenv().DebugLog(" Retrying quest at Point A...")
                 Fire("Job", "Truck")
                 task.wait(2)
             end
@@ -748,16 +748,16 @@ local function FarmLoop()
                     pcall(function()
                         if car and car.PrimaryPart then
                             car.PrimaryPart.Anchored = true
-                            print("[DEBUG] Truck anchored at Point C")
+                            getgenv().DebugLog(" Truck anchored at Point C")
                         end
                     end)
 
                     -- Fire RemoteEvent delivery
-                    print("[DEBUG] Firing Job RemoteEvent...")
+                    getgenv().DebugLog(" Firing Job RemoteEvent...")
                     Fire("Job", "Truck")
                     task.wait(0.3)
                     
-                    print("[DEBUG] Firing Delivery RemoteEvent...")
+                    getgenv().DebugLog(" Firing Delivery RemoteEvent...")
                     Fire("Delivery", LP.Name)
                     task.wait(0.3)
 
@@ -767,42 +767,42 @@ local function FarmLoop()
                         local parts = workspace:GetPartBoundsInBox(
                             CFrame.new(PT_C), Vector3.new(40, 15, 40)
                         )
-                        print("[DEBUG] Found " .. #parts .. " parts near Point C")
+                        getgenv().DebugLog(" Found " .. #parts .. " parts near Point C")
                         for _, p in ipairs(parts) do
                             local pp = p:FindFirstChildOfClass("ProximityPrompt")
                                      or (p.Parent and
                                          p.Parent:FindFirstChildOfClass("ProximityPrompt"))
                             if pp then
-                                print("[DEBUG] Firing ProximityPrompt: " .. pp.Parent.Name)
+                                getgenv().DebugLog(" Firing ProximityPrompt: " .. pp.Parent.Name)
                                 fireproximityprompt(pp)
                                 promptCount = promptCount + 1
                                 task.wait(0.5)
                             end
                         end
                     end)
-                    print("[DEBUG] Fired " .. promptCount .. " proximity prompts")
+                    getgenv().DebugLog(" Fired " .. promptCount .. " proximity prompts")
                     
                     -- Check money before/after
                     local moneyBefore = GetMoney()
-                    print("[DEBUG] Money before delivery: Rp " .. Fmt(moneyBefore))
+                    getgenv().DebugLog(" Money before delivery: Rp " .. Fmt(moneyBefore))
                     
                     -- Unanchor truck after job completion
                     task.wait(1.0)
                     pcall(function()
                         if car and car.PrimaryPart then
                             car.PrimaryPart.Anchored = false
-                            print("[DEBUG] Truck unanchored")
+                            getgenv().DebugLog(" Truck unanchored")
                         end
                     end)
                     
                     task.wait(1.0)
                     local moneyAfter = GetMoney()
-                    print("[DEBUG] Money after delivery: Rp " .. Fmt(moneyAfter))
+                    getgenv().DebugLog(" Money after delivery: Rp " .. Fmt(moneyAfter))
                     
                     if moneyAfter > moneyBefore then
-                        print("[DEBUG] ✅ Job completed! Earned: Rp " .. Fmt(moneyAfter - moneyBefore))
+                        getgenv().DebugLog(" ✅ Job completed! Earned: Rp " .. Fmt(moneyAfter - moneyBefore))
                     else
-                        print("[DEBUG] ❌ Job NOT completed - no money received")
+                        getgenv().DebugLog(" ❌ Job NOT completed - no money received")
                     end
                 end
 
@@ -1770,6 +1770,67 @@ task.spawn(function()
                 "Map: "..name.."\nPastikan kamu di Jawa Timur!", 7,"alert")
         end
     end
+end)
+
+-- Create on-screen debug display
+task.spawn(function()
+    task.wait(2)
+    pcall(function()
+        local sg = Instance.new("ScreenGui", LP.PlayerGui)
+        sg.Name = "CDID_Debug"
+        sg.ResetOnSpawn = false
+        sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        
+        local fr = Instance.new("ScrollingFrame", sg)
+        fr.Size = UDim2.new(0.35, 0, 0.5, 0)
+        fr.Position = UDim2.new(0.64, 0, 0.25, 0)
+        fr.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+        fr.BackgroundTransparency = 0.2
+        fr.BorderSizePixel = 0
+        fr.CanvasSize = UDim2.new(0, 0, 0, 0)
+        fr.ScrollBarThickness = 4
+        
+        local uic = Instance.new("UICorner", fr)
+        uic.CornerRadius = UDim.new(0, 10)
+        
+        local title = Instance.new("TextLabel", fr)
+        title.Size = UDim2.new(1, 0, 0, 30)
+        title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        title.Text = "🔍 CDID Debug Log"
+        title.TextColor3 = Color3.new(1, 1, 1)
+        title.Font = Enum.Font.GothamBold
+        title.TextSize = 13
+        title.BorderSizePixel = 0
+        
+        local uic2 = Instance.new("UICorner", title)
+        uic2.CornerRadius = UDim.new(0, 10)
+        
+        local list = Instance.new("UIListLayout", fr)
+        list.SortOrder = Enum.SortOrder.LayoutOrder
+        list.Padding = UDim.new(0, 1)
+        
+        getgenv().DebugLog = function(msg)
+            pcall(function()
+                local lbl = Instance.new("TextLabel", fr)
+                lbl.Size = UDim2.new(1, -8, 0, 18)
+                lbl.BackgroundTransparency = 1
+                lbl.Text = os.date("%H:%M:%S") .. " " .. tostring(msg)
+                lbl.TextColor3 = Color3.new(0.9, 0.9, 0.9)
+                lbl.Font = Enum.Font.Code
+                lbl.TextSize = 10
+                lbl.TextXAlignment = Enum.TextXAlignment.Left
+                lbl.TextWrapped = true
+                lbl.TextScaled = false
+                lbl.LayoutOrder = #fr:GetChildren()
+                
+                task.wait()
+                fr.CanvasSize = UDim2.new(0, 0, 0, list.AbsoluteContentSize.Y + 35)
+                fr.CanvasPosition = Vector2.new(0, fr.CanvasSize.Y.Offset)
+            end)
+        end
+        
+        getgenv().DebugLog("✅ Debug window ready")
+    end)
 end)
 
 print(string.format(
