@@ -66,7 +66,7 @@ local WH_MAX        = 600    -- webhook interval maksimum (10 menit)
 
 local PT_A = Vector3.new(34937.21, 135.64 + SAFE_Y, -54576.89)  -- ambil misi
 local PT_B = Vector3.new(35160.10, 135.64 + SAFE_Y, -54683.03)  -- spawn truck
-local PT_C = Vector3.new(27153.66, 388.50 + SAFE_Y,  37788.97)  -- delivery Surabaya
+local PT_C = Vector3.new(27157.46, 387.37 + SAFE_Y,  37787.37)  -- delivery Surabaya (fixed coordinate)
 
 --[[
   ═══════════════════════════════════════════════════════════════════
